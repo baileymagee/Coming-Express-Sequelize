@@ -43,7 +43,7 @@ router.get('/', async (req, res, next) => {
 
     const pagination = {};
 
-    if (page !== 0 && size !== 0) {
+    if (!(page === 0 && size === 0)) {
         if (page < 1 || size > 200) {
             errorResult.errors.push({message:'Requires valid page and size params'});
         }
@@ -52,11 +52,6 @@ router.get('/', async (req, res, next) => {
             pagination.offset = size * (page-1);
         }
     }
-
-
-
-
-
 
     // Phase 4: Student Search Filters
     /*
@@ -81,14 +76,35 @@ router.get('/', async (req, res, next) => {
                 message of 'Lefty should be either true or false' to
                 errorResult.errors
     */
+
     const where = {};
 
-    // Your code here
-    if (errorResult.errors.length !== 0) {
-        res.status(400);
-        next(errorResult)
+    if(req.query.firstName){
+        where.firstName = req.query.firstName;
+    };
+    if(req.query.lastName){
+        where.lastName = req.query.lastName;
+    };
+
+    if(req.query.lefty){
+        if(req.query.lefty === 'true'){
+            where.leftHanded = true
+        }
+        else if (req.query.lefty === 'false'){
+            where.leftHanded = false
+        }
+        else{
+            errorResult.errors.push({message:"Lefty should be either true or false"});
+        }
     }
 
+    if (errorResult.errors.length !== 0) {
+        res.status(400);
+        errorResult.count = await Student.count();
+        next(errorResult);
+    }
+
+    
 
     // Phase 2C: Handle invalid params with "Bad Request" response
     // Phase 3C: Include total student count in the response even if params were
@@ -107,11 +123,14 @@ router.get('/', async (req, res, next) => {
         */
     // Your code here
 
+
     let result = {};
 
     // Phase 3A: Include total number of results returned from the query without
         // limits and offsets as a property of count on the result
         // Note: This should be a new query
+        
+        
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
@@ -120,6 +139,9 @@ router.get('/', async (req, res, next) => {
         order: [['lastName'], ['firstName']],
         ...pagination
     });
+
+    result.count = await Student.count({where});
+    // result.count = result.rows.length;
 
     // Phase 2E: Include the page number as a key of page in the response data
         // In the special case (page=0, size=0) that returns all students, set
@@ -134,7 +156,7 @@ router.get('/', async (req, res, next) => {
     // Your code here
     result.page = page
 
-    if(page === 0) {
+    if(page === 0 && size === 0) {
         result.page = 1
     }
 
@@ -153,7 +175,13 @@ router.get('/', async (req, res, next) => {
             }
         */
     // Your code here
-
+    if(size !== 0){
+        result.pageCount = Math.floor(result.count/size) + 1;
+    }
+    else{
+        result.pageCount = 1;
+    }
+        
     return res.json(result);
 });
 
