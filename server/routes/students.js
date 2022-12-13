@@ -22,12 +22,41 @@ router.get('/', async (req, res, next) => {
 
     // Phase 2A: Use query params for page & size
     // Your code here
+    let {page, size} = req.query;
+
+    if (!page && +page !== 0) {
+        page = 1
+    }
+
+    if (!size && +size !== 0) {
+        size = 10
+    }
 
     // Phase 2B: Calculate limit and offset
     // Phase 2B (optional): Special case to return all students (page=0, size=0)
     // Phase 2B: Add an error message to errorResult.errors of
-        // 'Requires valid page and size params' when page or size is invalid
+    // 'Requires valid page and size params' when page or size is invalid
     // Your code here
+
+    page = +page;
+    size = parseInt(size);
+
+    const pagination = {};
+
+    if (page !== 0 && size !== 0) {
+        if (page < 1 || size > 200) {
+            errorResult.errors.push({message:'Requires valid page and size params'});
+        }
+        if (page >= 1 && size >= 1) {
+            pagination.limit = size;
+            pagination.offset = size * (page-1);
+        }
+    }
+
+
+
+
+
 
     // Phase 4: Student Search Filters
     /*
@@ -55,6 +84,10 @@ router.get('/', async (req, res, next) => {
     const where = {};
 
     // Your code here
+    if (errorResult.errors.length !== 0) {
+        res.status(400);
+        next(errorResult)
+    }
 
 
     // Phase 2C: Handle invalid params with "Bad Request" response
@@ -84,7 +117,8 @@ router.get('/', async (req, res, next) => {
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
         where,
         // Phase 1A: Order the Students search results
-        order: [['lastName'], ['firstName']]
+        order: [['lastName'], ['firstName']],
+        ...pagination
     });
 
     // Phase 2E: Include the page number as a key of page in the response data
@@ -98,6 +132,11 @@ router.get('/', async (req, res, next) => {
             }
         */
     // Your code here
+    result.page = page
+
+    if(page === 0) {
+        result.page = 1
+    }
 
     // Phase 3B:
         // Include the total number of available pages for this query as a key
@@ -115,7 +154,7 @@ router.get('/', async (req, res, next) => {
         */
     // Your code here
 
-    res.json(result);
+    return res.json(result);
 });
 
 // Export class - DO NOT MODIFY
