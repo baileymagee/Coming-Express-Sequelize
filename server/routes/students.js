@@ -7,6 +7,16 @@ const { Student } = require('../db/models');
 const { Op } = require("sequelize");
 
 // List
+// router.get('/', async (req, res, next) => {
+//     const result = await Student.findAll({
+//         order: [
+//             ['lastName'],['firstName']
+//         ]
+//     })
+//     return res.json(result);
+// })
+
+
 router.get('/', async (req, res, next) => {
     let errorResult = { errors: [], count: 0, pageCount: 0 };
 
@@ -74,6 +84,7 @@ router.get('/', async (req, res, next) => {
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
         where,
         // Phase 1A: Order the Students search results
+        order: [['lastName'], ['firstName']]
     });
 
     // Phase 2E: Include the page number as a key of page in the response data
