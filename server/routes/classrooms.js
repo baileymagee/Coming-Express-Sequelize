@@ -3,9 +3,10 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Classroom } = require('../db/models');
+const { Classroom, Supply, Student } = require('../db/models');
 const { Op } = require('sequelize');
 const { INTEGER } = require('sequelize');
+const classroom = require('../db/models/classroom');
 
 // List of classrooms
 
@@ -94,6 +95,19 @@ router.get('/:id', async (req, res, next) => {
                 // then firstName (both in ascending order)
                 // (Optional): No need to include the StudentClassrooms
         // Your code here
+        include: [{
+            model: Supply,
+            attributes: ['id', 'name', 'category', 'handed'],
+        }, {
+            model:Student,
+            attributes: ['id', 'firstName', 'lastName', 'leftHanded']
+        }],
+        order: [
+            [Supply, 'category'],
+            [Supply, 'name'],
+            [Student, 'lastName'],
+            [Student, 'firstName']
+        ]
     });
 
     if (!classroom) {
