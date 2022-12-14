@@ -5,13 +5,14 @@ const router = express.Router();
 // Import model(s)
 const { Classroom } = require('../db/models');
 const { Op } = require('sequelize');
+const { INTEGER } = require('sequelize');
 
 // List of classrooms
 
 router.get('/', async (req, res, next) => {
     let errorResult = { errors: [], count: 0, pageCount: 0 };
 
-    // Phase 6B: Classroom Search Filters
+    // Phase 6: Classroom Search Filters
     /*
         name filter:
             If the name query parameter exists, set the name query
@@ -38,6 +39,39 @@ router.get('/', async (req, res, next) => {
     const where = {};
 
     // Your code here
+    const {name} = req.query;
+
+    if (name) {
+        where.name = {
+            [Op.like]: `%${name}%`
+        }
+    }
+
+    const {studentLimit} = req.query;
+
+
+    if(studentLimit) {
+        let parts = studentLimit.split(',');
+        if (parts.length === 1 && Number.isInteger(+parts[0])){
+            where.studentLimit =+studentLimit
+        } else if (!Number.isInteger(+parts[0])) {
+            errorResult.errors.push({message: 'Student Limit should be an integer'})
+        }
+        else if (parts.length !== 2 || !+parts[0] || !+parts[1] || +parts[1] < +parts[0]){
+            errorResult.errors.push({message: 'Student Limit should be two numbers: min,max'})
+        } else {
+            where.studentLimit = {
+                [Op.between]: [+parts[0], +parts[1]]
+            }
+        }
+    }
+
+
+    if (errorResult.errors.length !== 0) {
+        res.status(400);
+        next(errorResult);
+    }
+
 
     const classrooms = await Classroom.findAll({
         attributes: [ 'id', 'name', 'studentLimit' ],
@@ -70,16 +104,35 @@ router.get('/:id', async (req, res, next) => {
     // Phase 5: Supply and Student counts, Overloaded classroom
         // Phase 5A: Find the number of supplies the classroom has and set it as
             // a property of supplyCount on the response
-        // Phase 5B: Find the number of students in the classroom and set it as
+            // Phase 5B: Find the number of students in the classroom and set it as
             // a property of studentCount on the response
-        // Phase 5C: Calculate if the classroom is overloaded by comparing the
+            // Phase 5C: Calculate if the classroom is overloaded by comparing the
             // studentLimit of the classroom to the number of students in the
             // classroom
-        // Optional Phase 5D: Calculate the average grade of the classroom
-    // Your code here
+            // Optional Phase 5D: Calculate the average grade of the classroom
+            // Your code here
+            const {classroomId} = req.params.id;
 
-    res.json(classroom);
-});
+            const results = await classroom.getSupplies();
+
+            let supplyCount = results.length;
+
+            let students = await classroom.getStudents();
+            let studentCount = students.length;
+
+
+            let classroomJson = classroom.toJSON();
+            classroomJson.supplyCount = supplyCount
+            classroomJson.studentCount = studentCount;
+
+            if (studentCount > classroomJson.studentLimit){
+                classroomJson.overloaded = true
+            } else {
+                classroomJson.overloaded = false
+            }
+
+            res.json(classroomJson);
+        });
 
 // Export class - DO NOT MODIFY
 module.exports = router;
